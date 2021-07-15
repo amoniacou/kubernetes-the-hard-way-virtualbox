@@ -7,7 +7,7 @@ Kubernetes components are stateless and store cluster state in [etcd](https://gi
 Download the official etcd release binaries from the [coreos/etcd](https://github.com/coreos/etcd) GitHub project:
 
 ```
-ETCD_VERSION=3.4.7
+ETCD_VERSION=3.4.16
 wget -q --show-progress --https-only --timestamping \
   "https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz"
 ```
@@ -26,7 +26,7 @@ vagrant ssh controller-0
 Extract and install the `etcd` server and the `etcdctl` command line utility:
 
 ```
-ETCD_VERSION=3.4.7
+ETCD_VERSION=3.4.16
 tar -xvf /vagrant/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz
 ```
 
@@ -59,7 +59,7 @@ ETCD_NAME=$(hostname -s)
 Create the `etcd.service` systemd unit file:
 
 ```
-cat > etcd.service <<EOF
+cat <<EOF | sudo tee /etc/systemd/system/etcd.service
 [Unit]
 Description=etcd
 Documentation=https://github.com/coreos
@@ -94,19 +94,11 @@ EOF
 ### Start the etcd Server
 
 ```
-sudo mv etcd.service /etc/systemd/system/
-```
-
-```
-sudo systemctl daemon-reload
-```
-
-```
-sudo systemctl enable etcd
-```
-
-```
-sudo systemctl start etcd
+{
+  sudo systemctl daemon-reload
+  sudo systemctl enable etcd
+  sudo systemctl start etcd
+}
 ```
 
 > Remember to run the above commands on each controller node: `controller-0`, `controller-1`, and `controller-2`.
@@ -116,7 +108,12 @@ sudo systemctl start etcd
 List the etcd cluster members:
 
 ```
-ETCDCTL_API=3 etcdctl member list
+sudo ETCDCTL_API=3 etcdctl member list \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/etcd/ca.pem \
+  --cert=/etc/etcd/kubernetes.pem \
+  --key=/etc/etcd/kubernetes-key.pem
+
 ```
 
 > output

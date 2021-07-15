@@ -159,6 +159,50 @@ worker-2-key.pem
 worker-2.pem
 ```
 
+### The Controller Manager Client Certificate
+
+Generate the `kube-controller-manager` client certificate and private key:
+
+```
+{
+
+cat > kube-controller-manager-csr.json <<EOF
+{
+  "CN": "system:kube-controller-manager",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-controller-manager",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+
+}
+```
+
+Results:
+
+```
+kube-controller-manager-key.pem
+kube-controller-manager.pem
+```
+
+
 ### The kube-proxy Client Certificate
 
 Create the `kube-proxy` client certificate signing request:
@@ -202,6 +246,49 @@ kube-proxy-key.pem
 kube-proxy.pem
 ```
 
+### The Scheduler Client Certificate
+
+Generate the `kube-scheduler` client certificate and private key:
+
+```
+{
+
+cat > kube-scheduler-csr.json <<EOF
+{
+  "CN": "system:kube-scheduler",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-scheduler",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+
+}
+```
+
+Results:
+
+```
+kube-scheduler-key.pem
+kube-scheduler.pem
+```
+
 ### The Kubernetes API Server Certificate
 
 The `kubernetes-the-hard-way` static IP address will be included in the list of subject alternative names for the Kubernetes API Server certificate. This will ensure the certificate can be validated by remote clients.
@@ -209,12 +296,16 @@ The `kubernetes-the-hard-way` static IP address will be included in the list of 
 Retrieve the `kubernetes-the-hard-way` static IP address:
 
 ```
+```
+
+Generate the Kubernetes API Server certificate and private key:
+
+```
+{
+
 KUBERNETES_PUBLIC_ADDRESS="192.168.100.100"
-```
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
 
-Create the Kubernetes API Server certificate signing request:
-
-```
 cat > kubernetes-csr.json <<EOF
 {
   "CN": "kubernetes",
@@ -233,18 +324,15 @@ cat > kubernetes-csr.json <<EOF
   ]
 }
 EOF
-```
 
-Generate the Kubernetes API Server certificate and private key:
-
-```
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=10.32.0.1,192.168.100.10,192.168.100.11,192.168.100.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
+  -hostname=10.32.0.1,192.168.100.10,192.168.100.11,192.168.100.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
+}
 ```
 
 Results:
@@ -254,12 +342,52 @@ kubernetes-key.pem
 kubernetes.pem
 ```
 
-Concatenate Kubernetes API Server certificate with CA:
-
-```
-cat kubernetes.pem ca.pem > kubernetes-tls-cert-file.pem
-```
-
 > The `kube-proxy` and `kubelet` client certificates will be used to generate client authentication configuration files in the next lab.
+
+
+### The Service Account Key Pair
+
+The Kubernetes Controller Manager leverages a key pair to generate and sign service account tokens as described in the [managing service accounts](https://kubernetes.io/docs/admin/service-accounts-admin/) documentation.
+
+Generate the `service-account` certificate and private key:
+
+```
+{
+
+cat > service-account-csr.json <<EOF
+{
+  "CN": "service-accounts",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  service-account-csr.json | cfssljson -bare service-account
+
+}
+```
+
+Results:
+
+```
+service-account-key.pem
+service-account.pem
+```
 
 Next: [Generating Kubernetes Configuration Files for Authentication](05-kubernetes-configuration-files.md)
